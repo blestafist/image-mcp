@@ -81,31 +81,32 @@ printf '%s\n' \
 
 ## OpenCode plugin (`image_generate_image`, `image_show_image`)
 
-The plugin is not in this repository. It lives in the OpenCode config, next to the other local plugins, so it is versioned with `~/.config/opencode`.
+The plugin source is in `plugin/` in this repository. It is a separate package from the Rust MCP server.
 
-Plugin source: `~/.config/opencode/plugins/image/` (`index.ts`, `package.json`).
+### Install
 
-### Install on a new machine
+1. Clone this repository and install the plugin's dependencies is not needed: OpenCode provides `@opencode/plugin`, but it must resolve from the OpenCode config directory.
+2. Choose one way to load the plugin:
+   - **Path to the clone** (simplest): in `~/.config/opencode/conf/secrets.json` (gitignored) use the absolute path:
 
-1. Copy `index.ts` and `package.json` from the OpenCode config repo to `~/.config/opencode/plugins/image/`. If the config repo is not cloned yet, clone it to `~/.config/opencode` first.
-2. Make sure `@opencode/plugin` is installed in `~/.config/opencode` (`npm install` there).
-3. Add the plugin to `conf/secrets.json` (gitignored, local only):
+     ```jsonc
+     { "plugins": [ { "package": "/path/to/opencode-image-mcp/plugin", "options": { ... } } ] }
+     ```
+
+   - **Copy into the config** (what the author uses): copy `plugin/src/index.ts` and `plugin/package.json` to `~/.config/opencode/plugins/image/` and use `"package": "./plugins/image"`.
+3. Put the options in the same `plugins` entry:
 
    ```jsonc
    {
-     "plugins": [
-       {
-         "package": "./plugins/image",
-         "options": {
-           "baseURL": "https://example.com/v1",
-           "model": "your-image-model",
-           "outputDir": "/tmp/opencode/images",
-           "previewMode": "overlay",
-           "autoPreview": false,
-           "apiKey": "..."
-         }
-       }
-     ]
+     "package": "...",
+     "options": {
+       "baseURL": "https://example.com/v1",
+       "model": "your-image-model",
+       "outputDir": "/tmp/opencode/images",
+       "previewMode": "overlay",
+       "autoPreview": false,
+       "apiKey": "..."
+     }
    }
    ```
 

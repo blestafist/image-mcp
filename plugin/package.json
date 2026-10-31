@@ -1,0 +1,23 @@
+{
+  "name": "opencode-plugin-image",
+  "version": "0.1.0",
+  "description": "OpenCode plugin: generate images through an OpenAI-compatible API and preview them in kitty.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "image",
+    "kitty"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@opencode/plugin": "^2.0.18"
+  }
+}
