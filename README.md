@@ -87,18 +87,18 @@ The plugin source is in `plugin/` in this repository. It is a separate package f
 
 1. Clone this repository. The plugin imports `@opencode/plugin`, which OpenCode provides. Make sure it is installed in `~/.config/opencode` (`npm install` there).
 2. Choose one way to load the plugin:
-   - **Path to the clone** (simplest): in `~/.config/opencode/conf/secrets.json` (gitignored) use the absolute path:
+   - **Path to the clone** (simplest): add the absolute path to the `plugins` array in your OpenCode config (or `conf/plugins.json` if you use config fragments):
 
      ```jsonc
      { "plugins": [ { "package": "/path/to/opencode-image-mcp/plugin", "options": { ... } } ] }
      ```
 
-   - **Copy into the config** (what the author uses): copy `plugin/src/index.ts` and `plugin/package.json` to `~/.config/opencode/plugins/image/` and use `"package": "./plugins/image"`.
-3. Config layout (fragments in `~/.config/opencode/conf/`, rebuilt into `opencode.jsonc`):
+   - **Copy into the config** (what the author uses): copy `plugin/src/index.ts` and `plugin/package.json` to `~/.config/opencode/plugins/image/` and use `"package": "./plugins/image"`. This is a flat copy, so edit the copied `package.json`: set `"main": "./index.ts"`, `"exports": { ".": "./index.ts" }`, and `"files": ["index.ts"]`. Leaving `./src/index.ts` there prevents OpenCode from loading the plugin. Recopy `index.ts` when updating.
+3. If you use this author's config-fragment layout (`conf/`, `scripts/build-config.mjs`, and the `build:config` npm script are part of the author's config repository, not built into OpenCode):
    - `plugins.json` (committable): the plugin entry and its non-secret options (`model`, `outputDir`, `previewMode`, `autoPreview`).
    - `secrets.json` (gitignored): the 9Router `baseURL` and `apiKey` under `providers.9router.settings`, plus the plugin `apiKey`. Copy `secrets.json.example` and fill in the placeholders.
 
-   The plugin takes its `baseURL` from `providers.9router.settings.baseURL`, so the URL is set once. The `baseURL` option is only needed to point the image plugin at a different endpoint.
+   The plugin reads `providers.9router.settings.baseURL` when `generate_image` runs, after config overrides are applied, so the URL is set once. The `baseURL` option is only needed to point the image plugin at a different endpoint. Without a 9Router provider, set this option or `IMAGE_BASE_URL`.
 
    ```jsonc
    {
@@ -113,8 +113,10 @@ The plugin source is in `plugin/` in this repository. It is a separate package f
    }
    ```
 
-4. Rebuild the config: `cd ~/.config/opencode && npm run build:config`.
-5. Restart OpenCode and check the log: `grep "loading plugin" ~/.local/share/opencode/log/opencode.log | tail -3`.
+   With a standard OpenCode config, put the plugin entry in `opencode.jsonc` instead and use `"apiKey": "{env:IMAGE_API_KEY}"` to keep the token out of git.
+
+4. With config fragments, rebuild the config: `cd ~/.config/opencode && npm run build:config`. Do not edit the generated `opencode.jsonc` directly.
+5. OpenCode watches config changes; use `/reload` to force a reload without restarting the service. Ask the agent to call `image_generate_image` to verify actual generation, not just tool visibility.
 
 ### Options
 
@@ -133,10 +135,22 @@ The plugin source is in `plugin/` in this repository. It is a separate package f
 
 ```
 allow_remote_control yes
-listen_on unix:/tmp/opencode/kitty
+listen_on unix:@opencode-kitty-{kitty_pid}
 ```
 
 Outside kitty the plugin falls back to `xdg-open`. Use `previewMode: "none"` for headless use.
+
+`listen_on` takes effect in a new kitty process; reloading kitty's config does not change an existing process's listening socket.
+
+### Plugin regression tests
+
+Run these from the repository clone with Node.js 22.18+ (native TypeScript support). The tests mock the API and do not require credentials:
+
+```sh
+cd plugin
+npm install
+npm test
+```
 
 ## Roadmap
 

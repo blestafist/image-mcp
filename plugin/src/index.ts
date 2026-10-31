@@ -92,7 +92,9 @@ async function generate(input: GenerateInput, opts: Options, signal: AbortSignal
   const baseURL = (opts.baseURL ?? providerBaseURL ?? process.env.IMAGE_BASE_URL ?? "").replace(/\/$/, "")
   const apiKey = opts.apiKey ?? process.env.IMAGE_API_KEY
   const model = input.model ?? opts.model ?? process.env.IMAGE_MODEL
-  if (!baseURL) throw new Error("image base URL is not set (plugin option baseURL or IMAGE_BASE_URL)")
+  if (!baseURL) {
+    throw new Error("image base URL is not set (plugin option baseURL, providers.9router.settings.baseURL or IMAGE_BASE_URL)")
+  }
   if (!apiKey) throw new Error("image API key is not set (plugin option apiKey or IMAGE_API_KEY)")
   if (!model) throw new Error("no model: pass `model` or set the plugin option model / IMAGE_MODEL")
 
@@ -193,13 +195,6 @@ export default Plugin.define({
     const opts = (ctx.options ?? {}) as Options
     const previewMode: PreviewMode = opts.preview === false ? "none" : (opts.previewMode ?? "overlay")
 
-    // Share the 9Router baseURL instead of duplicating it in plugin options.
-    let providerBaseURL: string | undefined
-    await ctx.provider.transform((editor) => {
-      const settings = editor.get("9router")?.provider.settings as { baseURL?: string } | undefined
-      providerBaseURL = settings?.baseURL
-    })
-
     await ctx.tool.transform((editor) => {
       editor.namespace({ name: "image", description: "Image generation" })
 
@@ -210,6 +205,14 @@ export default Plugin.define({
         input: GENERATE_SCHEMA,
         options: { namespace: "image", codemode: false },
         execute: async (input, context) => {
+          // Read the configured provider at execution time. Source transforms run
+          // before config overrides and cannot capture the final shared baseURL.
+          let providerBaseURL: string | undefined
+          if (opts.baseURL == null) {
+            const provider = await ctx.provider.get({ providerID: "9router" }).catch(() => undefined)
+            const value = provider?.data.settings?.baseURL
+            if (typeof value === "string") providerBaseURL = value
+          }
           const { model, paths } = await generate(input as GenerateInput, opts, context.signal, providerBaseURL)
           if (previewMode !== "none" && opts.autoPreview !== false) {
             for (const path of paths) {
@@ -239,6 +242,5 @@ export default Plugin.define({
         },
       })
     })
-
   },
 })
