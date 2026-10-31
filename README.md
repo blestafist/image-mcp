@@ -85,7 +85,7 @@ The plugin source is in `plugin/` in this repository. It is a separate package f
 
 ### Install
 
-1. Clone this repository and install the plugin's dependencies is not needed: OpenCode provides `@opencode/plugin`, but it must resolve from the OpenCode config directory.
+1. Clone this repository. The plugin imports `@opencode/plugin`, which OpenCode provides. Make sure it is installed in `~/.config/opencode` (`npm install` there).
 2. Choose one way to load the plugin:
    - **Path to the clone** (simplest): in `~/.config/opencode/conf/secrets.json` (gitignored) use the absolute path:
 
