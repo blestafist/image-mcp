@@ -88,8 +88,8 @@ function toDataUri(bytes: Buffer, path: string): string {
   return `data:${mime};base64,${bytes.toString("base64")}`
 }
 
-async function generate(input: GenerateInput, opts: Options, signal: AbortSignal) {
-  const baseURL = (opts.baseURL ?? process.env.IMAGE_BASE_URL ?? "").replace(/\/$/, "")
+async function generate(input: GenerateInput, opts: Options, signal: AbortSignal, providerBaseURL?: string) {
+  const baseURL = (opts.baseURL ?? providerBaseURL ?? process.env.IMAGE_BASE_URL ?? "").replace(/\/$/, "")
   const apiKey = opts.apiKey ?? process.env.IMAGE_API_KEY
   const model = input.model ?? opts.model ?? process.env.IMAGE_MODEL
   if (!baseURL) throw new Error("image base URL is not set (plugin option baseURL or IMAGE_BASE_URL)")
@@ -193,6 +193,13 @@ export default Plugin.define({
     const opts = (ctx.options ?? {}) as Options
     const previewMode: PreviewMode = opts.preview === false ? "none" : (opts.previewMode ?? "overlay")
 
+    // Share the 9Router baseURL instead of duplicating it in plugin options.
+    let providerBaseURL: string | undefined
+    await ctx.provider.transform((editor) => {
+      const settings = editor.get("9router")?.provider.settings as { baseURL?: string } | undefined
+      providerBaseURL = settings?.baseURL
+    })
+
     await ctx.tool.transform((editor) => {
       editor.namespace({ name: "image", description: "Image generation" })
 
@@ -203,7 +210,7 @@ export default Plugin.define({
         input: GENERATE_SCHEMA,
         options: { namespace: "image", codemode: false },
         execute: async (input, context) => {
-          const { model, paths } = await generate(input as GenerateInput, opts, context.signal)
+          const { model, paths } = await generate(input as GenerateInput, opts, context.signal, providerBaseURL)
           if (previewMode !== "none" && opts.autoPreview !== false) {
             for (const path of paths) {
               await preview(path, previewMode).catch((err) => console.warn(`[image] preview failed: ${err}`))

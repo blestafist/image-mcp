@@ -94,13 +94,16 @@ The plugin source is in `plugin/` in this repository. It is a separate package f
      ```
 
    - **Copy into the config** (what the author uses): copy `plugin/src/index.ts` and `plugin/package.json` to `~/.config/opencode/plugins/image/` and use `"package": "./plugins/image"`.
-3. Put the options in the same `plugins` entry:
+3. Config layout (fragments in `~/.config/opencode/conf/`, rebuilt into `opencode.jsonc`):
+   - `plugins.json` (committable): the plugin entry and its non-secret options (`model`, `outputDir`, `previewMode`, `autoPreview`).
+   - `secrets.json` (gitignored): the 9Router `baseURL` and `apiKey` under `providers.9router.settings`, plus the plugin `apiKey`. Copy `secrets.json.example` and fill in the placeholders.
+
+   The plugin takes its `baseURL` from `providers.9router.settings.baseURL`, so the URL is set once. The `baseURL` option is only needed to point the image plugin at a different endpoint.
 
    ```jsonc
    {
-     "package": "...",
+     "package": "./plugins/image",
      "options": {
-       "baseURL": "https://example.com/v1",
        "model": "your-image-model",
        "outputDir": "/tmp/opencode/images",
        "previewMode": "overlay",
@@ -117,7 +120,7 @@ The plugin source is in `plugin/` in this repository. It is a separate package f
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `baseURL` | `IMAGE_BASE_URL` env | OpenAI-compatible API base URL |
+| `baseURL` | 9Router `baseURL`, then `IMAGE_BASE_URL` env | OpenAI-compatible API base URL override |
 | `apiKey` | `IMAGE_API_KEY` env | Bearer token |
 | `model` | `IMAGE_MODEL` env | Default model; the tool call can override it |
 | `outputDir` | `/tmp/opencode/images` | Where images are saved |
