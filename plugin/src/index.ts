@@ -157,27 +157,33 @@ function runWait(cmd: string, args: string[]): Promise<void> {
   })
 }
 
-async function preview(path: string, mode: PreviewMode) {
-  if (mode === "none") return
-  if (mode === "overlay" && process.env.KITTY_WINDOW_ID) {
-    try {
-      await runWait("kitten", [
-        "@",
-        "launch",
-        "--type=overlay",
-        "--title",
-        `image: ${basename(path)}`,
-        "kitten",
-        "icat",
-        "--hold",
-        path,
-      ])
-      return
-    } catch {
-      // Remote control is off or kitten is missing: fall back to the desktop viewer.
+type Shown = "overlay" | "xdg-open"
+
+async function preview(path: string, mode: Exclude<PreviewMode, "none">): Promise<Shown> {
+  if (mode === "overlay") {
+    if (!process.env.KITTY_WINDOW_ID) {
+      console.warn("[image] not running inside kitty, falling back to xdg-open")
+    } else {
+      try {
+        await runWait("kitten", [
+          "@",
+          "launch",
+          "--type=overlay",
+          "--title",
+          `image: ${basename(path)}`,
+          "kitten",
+          "icat",
+          "--hold",
+          path,
+        ])
+        return "overlay"
+      } catch (err) {
+        console.warn(`[image] kitty overlay failed (${err}), falling back to xdg-open`)
+      }
     }
   }
   await run("xdg-open", [path])
+  return "xdg-open"
 }
 
 export default Plugin.define({
@@ -212,18 +218,22 @@ export default Plugin.define({
         execute: async (input) => {
           const path = resolve(expandHome((input as { path: string }).path))
           await stat(path)
-          await preview(path, previewMode === "none" ? "overlay" : previewMode)
-          return { content: `Opened ${path}` }
+          if (previewMode === "none") {
+            return { content: `Preview is disabled (previewMode: none). File: ${path}` }
+          }
+          const shown = await preview(path, previewMode)
+          return { content: `Opened ${path} (${shown})` }
         },
       })
     })
 
     if (previewMode !== "none") {
+      const mode = previewMode
       await ctx.tool.hook("execute.after", async (event) => {
         if (event.status !== "completed" || event.tool !== "image_generate_image") return
         const paths = (event.result.metadata?.paths ?? []) as string[]
         for (const path of paths) {
-          await preview(path, previewMode).catch((err) => console.warn(`[image] preview failed: ${err}`))
+          await preview(path, mode).catch((err) => console.warn(`[image] preview failed: ${err}`))
         }
       })
     }
