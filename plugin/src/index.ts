@@ -8,6 +8,7 @@ type PreviewMode = "overlay" | "xdg-open" | "none"
 
 type Options = {
   preview?: boolean
+  autoPreview?: boolean
   previewMode?: PreviewMode
   model?: string
   outputDir?: string
@@ -198,12 +199,12 @@ export default Plugin.define({
       editor.add({
         name: "generate_image",
         description:
-          "Generate an image from a text prompt, optionally guided by a reference image. Saves the result to disk, shows it to the user automatically, and returns the file paths. Do not call show_image for the result.",
+          "Generate an image from a text prompt, optionally guided by a reference image. Saves the result to disk and returns the file paths. Use show_image with a returned path to display it to the user when they ask.",
         input: GENERATE_SCHEMA,
         options: { namespace: "image", codemode: false },
         execute: async (input, context) => {
           const { model, paths } = await generate(input as GenerateInput, opts, context.signal)
-          if (previewMode !== "none") {
+          if (previewMode !== "none" && opts.autoPreview !== false) {
             for (const path of paths) {
               await preview(path, previewMode).catch((err) => console.warn(`[image] preview failed: ${err}`))
             }
@@ -217,7 +218,7 @@ export default Plugin.define({
       editor.add({
         name: "show_image",
         description:
-          "Show an existing image file to the user in a kitty overlay (or the desktop viewer as a fallback). Do not call this for images returned by generate_image: they are already shown.",
+          "Show an image file to the user in a kitty overlay (or the desktop viewer as a fallback). Use it to display an image the user asked to see, including images returned by generate_image.",
         input: SHOW_SCHEMA,
         options: { namespace: "image", codemode: false },
         execute: async (input) => {
