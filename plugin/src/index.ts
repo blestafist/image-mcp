@@ -198,21 +198,26 @@ export default Plugin.define({
       editor.add({
         name: "generate_image",
         description:
-          "Generate an image from a text prompt, optionally guided by a reference image. Saves the result to disk and returns the file paths.",
+          "Generate an image from a text prompt, optionally guided by a reference image. Saves the result to disk, shows it to the user automatically, and returns the file paths. Do not call show_image for the result.",
         input: GENERATE_SCHEMA,
         options: { namespace: "image", codemode: false },
         execute: async (input, context) => {
           const { model, paths } = await generate(input as GenerateInput, opts, context.signal)
+          if (previewMode !== "none") {
+            for (const path of paths) {
+              await preview(path, previewMode).catch((err) => console.warn(`[image] preview failed: ${err}`))
+            }
+          }
           return {
             content: `Generated ${paths.length} image(s) with ${model}:\n${paths.join("\n")}`,
-            metadata: { paths },
           }
         },
       })
 
       editor.add({
         name: "show_image",
-        description: "Show an image file to the user in a kitty overlay (or the desktop viewer as a fallback).",
+        description:
+          "Show an existing image file to the user in a kitty overlay (or the desktop viewer as a fallback). Do not call this for images returned by generate_image: they are already shown.",
         input: SHOW_SCHEMA,
         options: { namespace: "image", codemode: false },
         execute: async (input) => {
@@ -227,15 +232,5 @@ export default Plugin.define({
       })
     })
 
-    if (previewMode !== "none") {
-      const mode = previewMode
-      await ctx.tool.hook("execute.after", async (event) => {
-        if (event.status !== "completed" || event.tool !== "image_generate_image") return
-        const paths = (event.result.metadata?.paths ?? []) as string[]
-        for (const path of paths) {
-          await preview(path, mode).catch((err) => console.warn(`[image] preview failed: ${err}`))
-        }
-      })
-    }
   },
 })
