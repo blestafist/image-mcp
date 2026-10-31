@@ -79,6 +79,61 @@ printf '%s\n' \
   | IMAGE_API_KEY=... IMAGE_BASE_URL=... IMAGE_MODEL=... ./target/release/opencode-image-mcp
 ```
 
+## OpenCode plugin (`image_generate_image`, `image_show_image`)
+
+The plugin is not in this repository. It lives in the OpenCode config, next to the other local plugins, so it is versioned with `~/.config/opencode`.
+
+Plugin source: `~/.config/opencode/plugins/image/` (`index.ts`, `package.json`).
+
+### Install on a new machine
+
+1. Copy `index.ts` and `package.json` from the OpenCode config repo to `~/.config/opencode/plugins/image/`. If the config repo is not cloned yet, clone it to `~/.config/opencode` first.
+2. Make sure `@opencode/plugin` is installed in `~/.config/opencode` (`npm install` there).
+3. Add the plugin to `conf/secrets.json` (gitignored, local only):
+
+   ```jsonc
+   {
+     "plugins": [
+       {
+         "package": "./plugins/image",
+         "options": {
+           "baseURL": "https://example.com/v1",
+           "model": "your-image-model",
+           "outputDir": "/tmp/opencode/images",
+           "previewMode": "overlay",
+           "autoPreview": false,
+           "apiKey": "..."
+         }
+       }
+     ]
+   }
+   ```
+
+4. Rebuild the config: `cd ~/.config/opencode && npm run build:config`.
+5. Restart OpenCode and check the log: `grep "loading plugin" ~/.local/share/opencode/log/opencode.log | tail -3`.
+
+### Options
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `baseURL` | `IMAGE_BASE_URL` env | OpenAI-compatible API base URL |
+| `apiKey` | `IMAGE_API_KEY` env | Bearer token |
+| `model` | `IMAGE_MODEL` env | Default model; the tool call can override it |
+| `outputDir` | `/tmp/opencode/images` | Where images are saved |
+| `previewMode` | `overlay` | `overlay` (kitty), `xdg-open`, or `none` |
+| `autoPreview` | `true` | If `false`, `generate_image` only saves; use `show_image` to display |
+
+### kitty preview
+
+`overlay` needs kitty with remote control enabled in `kitty.conf`:
+
+```
+allow_remote_control yes
+listen_on unix:/tmp/opencode/kitty
+```
+
+Outside kitty the plugin falls back to `xdg-open`. Use `previewMode: "none"` for headless use.
+
 ## Roadmap
 
 - Additional providers (e.g. Codex image generation) behind the same tool interface
